@@ -1,0 +1,30 @@
+[project]
+name = "earstuffing"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "Chris Bizon", email = "bizon@renci.org" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "bibtexparser>=2.1.0",
+    "boto3>=1.43.111",
+    "httpx>=0.28.1",
+]
+
+[project.scripts]
+earstuffing = "earstuffing:main"
+
+[build-system]
+requires = ["uv_build>=0.8.14,<0.9.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+]
+
+[tool.pytest.ini_options]
+addopts = "-m 'not integration'"
+markers = ["integration: calls real external services (Azure TTS)"]
