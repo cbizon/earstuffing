@@ -14,3 +14,10 @@ uv run earstuffing prepare <bibkey>
 uv run earstuffing render <slug>
 uv run earstuffing publish
 ```
+
+## Setup
+
+Copy the values marked empty in `earstuffing.toml` into a gitignored
+`earstuffing.local.toml` (Drive paths, Azure endpoint, R2 account, public URL and
+a random feed prefix). Keys go in the macOS keychain: `azure-openai` for Azure
+and `earstuffing-r2` (account = R2 access key ID, password = secret).

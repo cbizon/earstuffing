@@ -1,0 +1,39 @@
+# Shared defaults. Put machine-specific values (paths, endpoint, R2 account,
+# public URL, feed prefix) in earstuffing.local.toml, which is gitignored and
+# overrides this file. Secrets live in the macOS keychain.
+
+[paths]
+# Synced Google Drive Paperpile folder, e.g.
+# "~/Library/CloudStorage/GoogleDrive-<account>/My Drive/Paperpile"
+paperpile_dir = ""
+# BibTeX file kept current by Paperpile's auto-export of the "Listen" label.
+bib_file = ""
+data_dir = "data"
+
+[tts]
+# Azure OpenAI v1 endpoint, e.g. "https://<resource>.openai.azure.com/openai/v1"
+endpoint = ""
+deployment = "gpt-4o-mini-tts"
+voice = "cedar"
+instructions = """Speak as a knowledgeable colleague explaining a research paper to another \
+scientist. Calm, clear and conversational, at a moderate pace. Natural emphasis, \
+nothing theatrical. Pause briefly between sections."""
+keychain_service = "azure-openai"
+keychain_account = "bizon"
+max_chunk_chars = 3500
+bitrate = "64k"
+
+[r2]
+account_id = ""
+bucket = "earstuffing"
+# Public base URL of the bucket, e.g. https://pub-xxxx.r2.dev
+public_url = ""
+# Random path prefix so the feed URL is not guessable.
+prefix = ""
+keychain_service = "earstuffing-r2"
+
+[feed]
+title = "Earstuffing"
+description = "Narrated explanations and assessments of research papers."
+author = "Chris Bizon"
+language = "en-us"
