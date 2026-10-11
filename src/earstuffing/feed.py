@@ -46,12 +46,13 @@ def build_feed(episodes: list[dict], feed_cfg: dict, base_url: str) -> bytes:
 
     for ep in episodes:
         item = _sub(channel, "item")
-        _sub(item, "title", ep["title"])
+        _sub(item, "title", f"{ep['number']} · {ep['title']}")
         _sub(item, "description", episode_description(ep))
         _sub(item, "guid", ep["slug"], isPermaLink="false")
         _sub(item, "pubDate", format_datetime(datetime.fromisoformat(ep["rendered_at"])))
         _sub(item, "enclosure", url=f"{base_url}/episodes/{ep['slug']}.mp3",
              length=str(ep["audio_bytes"]), type="audio/mpeg")
         _sub(item, _it("duration"), _hms(ep["duration"]))
+        _sub(item, _it("episode"), str(ep["number"]))
     ET.indent(rss)
     return ET.tostring(rss, encoding="utf-8", xml_declaration=True)

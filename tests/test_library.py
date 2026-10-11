@@ -90,6 +90,9 @@ def test_episode_lifecycle(tmp_path):
     meta = {"slug": "x2020", "title": "T", "authors": [], "year": "", "venue": "", "doi": "", "url": ""}
     assert library.episode_status(tmp_path, "x2020") == "new"
     d = library.create_episode(tmp_path, meta)
+    assert library.read_meta(tmp_path, "x2020")["number"] == 1
+    library.create_episode(tmp_path, {**meta, "slug": "y2021"})
+    assert library.read_meta(tmp_path, "y2021")["number"] == 2
     assert library.episode_status(tmp_path, "x2020") == "needs_script"
     with pytest.raises(FileExistsError):
         library.create_episode(tmp_path, meta)

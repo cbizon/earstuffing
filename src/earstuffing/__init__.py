@@ -58,9 +58,11 @@ def cmd_render(config: dict, args) -> None:
     summary = (d / library.SUMMARY).read_text().strip()
     if not script or not summary:
         sys.exit(f"{d} has an empty script or summary")
+    number = library.read_meta(data_dir, args.slug)["number"]
+    spoken = f"Paper {number}.\n\n{script}\n\nThat was paper {number}."
     out = d / library.AUDIO
     api_key = keychain_secret(config["tts"]["keychain_service"], config["tts"]["keychain_account"])
-    duration = tts.render(script, out, config["tts"], api_key)
+    duration = tts.render(spoken, out, config["tts"], api_key)
     meta = library.update_meta(
         data_dir,
         args.slug,
