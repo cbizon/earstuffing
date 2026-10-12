@@ -7,7 +7,7 @@
 
     <application
         android:label="Earstuffing Notes"
-        android:icon="@android:drawable/ic_btn_speak_now"
+        android:icon="@drawable/ic_note"
         android:allowBackup="false">
 
         <meta-data

@@ -11,8 +11,8 @@ android {
         applicationId = "io.github.cbizon.earstuffing"
         minSdk = 29
         targetSdk = 35
-        versionCode = 3
-        versionName = "0.3"
+        versionCode = 4
+        versionName = "0.4"
     }
 
     compileOptions {
