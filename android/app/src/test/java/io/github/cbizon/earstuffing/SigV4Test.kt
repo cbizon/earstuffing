@@ -32,6 +32,26 @@ class SigV4Test {
     }
 
     @Test
+    fun deleteMatchesBotocore() {
+        val signed = SigV4.sign(
+            method = "DELETE",
+            host = "acct123.r2.cloudflarestorage.com",
+            path = "/earstuffing-notes/probes/x.txt",
+            body = ByteArray(0),
+            contentType = "",
+            accessKeyId = "AKIDEXAMPLE",
+            secret = "wJalrXUtnFEMI/K7MDENG+bPxRfiCYEXAMPLEKEY",
+            now = Instant.parse("2026-10-12T13:50:31Z"),
+        )
+        assertEquals(
+            "AWS4-HMAC-SHA256 Credential=AKIDEXAMPLE/20261012/auto/s3/aws4_request, " +
+                "SignedHeaders=host;x-amz-content-sha256;x-amz-date, " +
+                "Signature=79b1e88fd24ebc0f8e138f92a36b1e8874caaa377fce1b22b1bdbb970b0491ea",
+            signed.headers["Authorization"],
+        )
+    }
+
+    @Test
     fun encodesReservedCharacters() {
         assertEquals("a%20b%2Bc~d", SigV4.uriEncode("a b+c~d"))
     }

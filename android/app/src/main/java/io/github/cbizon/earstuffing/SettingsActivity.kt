@@ -13,6 +13,11 @@ import android.widget.ScrollView
 import android.widget.TextView
 import androidx.activity.ComponentActivity
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.IOException
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 
@@ -48,11 +53,17 @@ class SettingsActivity : ComponentActivity() {
         fun button(label: String, onClick: () -> Unit) =
             column.addView(Button(this).apply { text = label; setOnClickListener { onClick() } })
 
+        fun save() = Config.save(this, Config(account.text.toString(), bucket.text.toString(),
+            keyId.text.toString(), secret.text.toString()))
+
         button("Save and upload pending notes") {
-            Config.save(this, Config(account.text.toString(), bucket.text.toString(),
-                keyId.text.toString(), secret.text.toString()))
+            save()
             UploadWorker.enqueue(this)
             refresh()
+        }
+        button("Test connection") {
+            save()
+            testConnection()
         }
         button("Allow microphone") { micPermission.launch(Manifest.permission.RECORD_AUDIO) }
         column.addView(TextView(this).apply {
@@ -80,6 +91,32 @@ class SettingsActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         refresh()
+    }
+
+    /** Upload and delete a small probe file to prove the account, bucket and key all work. */
+    private fun testConnection() {
+        val config = Config.load(this)
+        if (config == null) {
+            Status.set(this, "Test failed: fill in all four settings first")
+            refresh()
+            return
+        }
+        Status.set(this, "Testing connection…")
+        refresh()
+        lifecycleScope.launch {
+            val result = withContext(Dispatchers.IO) {
+                val key = "probes/${NoteStore.newId()}.txt"
+                try {
+                    UploadWorker.put(config, key, "probe".toByteArray(), "text/plain")
+                    UploadWorker.delete(config, key)
+                    "Connection OK: uploaded and deleted a test file"
+                } catch (e: IOException) {
+                    "Connection test failed: ${e.message}"
+                }
+            }
+            Status.set(this@SettingsActivity, result)
+            refresh()
+        }
     }
 
     private fun refresh() {

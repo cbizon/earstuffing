@@ -30,7 +30,12 @@ class UploadWorker(context: Context, params: WorkerParameters) : CoroutineWorker
             return@withContext Result.failure()
         }
         val dir = NoteStore.dir(applicationContext)
-        for (id in NoteStore.pending(applicationContext)) {
+        val pending = NoteStore.pending(applicationContext)
+        if (pending.isEmpty()) {
+            Status.set(applicationContext, "Nothing to upload (checked ${Instant.now()})")
+            return@withContext Result.success()
+        }
+        for (id in pending) {
             val wav = File(dir, "$id.wav")
             val json = File(dir, "$id.json")
             try {
@@ -51,28 +56,35 @@ class UploadWorker(context: Context, params: WorkerParameters) : CoroutineWorker
         Result.success()
     }
 
-    private fun put(config: Config, key: String, body: ByteArray, contentType: String) {
-        val signed = SigV4.signPut(
-            config.host, "/${config.bucket}/$key", body, contentType,
-            config.accessKeyId, config.secret, Instant.now(),
-        )
-        val conn = URL(signed.url).openConnection() as HttpURLConnection
-        try {
-            conn.requestMethod = "PUT"
-            conn.doOutput = true
-            conn.setFixedLengthStreamingMode(body.size)
-            signed.headers.forEach { (k, v) -> conn.setRequestProperty(k, v) }
-            conn.outputStream.use { it.write(body) }
-            val code = conn.responseCode
-            if (code !in 200..299) {
-                throw HttpError(code, conn.errorStream?.bufferedReader()?.readText()?.take(300) ?: "")
-            }
-        } finally {
-            conn.disconnect()
-        }
-    }
-
     companion object {
+        fun put(config: Config, key: String, body: ByteArray, contentType: String) =
+            request("PUT", config, key, body, contentType)
+
+        fun delete(config: Config, key: String) = request("DELETE", config, key, ByteArray(0), "")
+
+        private fun request(method: String, config: Config, key: String, body: ByteArray, contentType: String) {
+            val signed = SigV4.sign(
+                method, config.host, "/${config.bucket}/$key", body, contentType,
+                config.accessKeyId, config.secret, Instant.now(),
+            )
+            val conn = URL(signed.url).openConnection() as HttpURLConnection
+            try {
+                conn.requestMethod = method
+                signed.headers.forEach { (k, v) -> conn.setRequestProperty(k, v) }
+                if (method == "PUT") {
+                    conn.doOutput = true
+                    conn.setFixedLengthStreamingMode(body.size)
+                    conn.outputStream.use { it.write(body) }
+                }
+                val code = conn.responseCode
+                if (code !in 200..299) {
+                    throw HttpError(code, conn.errorStream?.bufferedReader()?.readText()?.take(300) ?: "")
+                }
+            } finally {
+                conn.disconnect()
+            }
+        }
+
         fun enqueue(context: Context) {
             val request = OneTimeWorkRequestBuilder<UploadWorker>()
                 .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build())

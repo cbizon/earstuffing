@@ -11,8 +11,8 @@ android {
         applicationId = "io.github.cbizon.earstuffing"
         minSdk = 29
         targetSdk = 35
-        versionCode = 2
-        versionName = "0.2"
+        versionCode = 3
+        versionName = "0.3"
     }
 
     compileOptions {
@@ -30,5 +30,6 @@ dependencies {
     implementation("androidx.work:work-runtime-ktx:2.9.1")
     implementation("androidx.core:core-ktx:1.13.1")
     implementation("androidx.activity:activity-ktx:1.9.3")
+    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.7")
     testImplementation("junit:junit:4.13.2")
 }
