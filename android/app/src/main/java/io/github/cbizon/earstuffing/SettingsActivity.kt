@@ -13,6 +13,8 @@ import android.widget.ScrollView
 import android.widget.TextView
 import androidx.activity.ComponentActivity
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 
 /** Phone-side setup: R2 credentials, permissions, and upload status. */
 class SettingsActivity : ComponentActivity() {
@@ -53,6 +55,11 @@ class SettingsActivity : ComponentActivity() {
             refresh()
         }
         button("Allow microphone") { micPermission.launch(Manifest.permission.RECORD_AUDIO) }
+        column.addView(TextView(this).apply {
+            text = "Reading what's playing uses Android's notification access; the app never reads " +
+                "notifications. If the switch is grayed out: Settings > Apps > Earstuffing Notes > " +
+                "\u22ee menu > Allow restricted settings, then try again."
+        })
         button("Allow reading what's playing (notification access)") {
             startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
         }
@@ -60,7 +67,14 @@ class SettingsActivity : ComponentActivity() {
 
         status = TextView(this).apply { setPadding(0, pad, 0, 0) }
         column.addView(status)
-        setContentView(ScrollView(this).apply { addView(column) })
+        val scroll = ScrollView(this).apply { addView(column) }
+        // Android 15 draws edge to edge: keep content clear of the status bar, nav bar and keyboard.
+        ViewCompat.setOnApplyWindowInsetsListener(scroll) { v, insets ->
+            val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.ime())
+            v.setPadding(bars.left, bars.top, bars.right, bars.bottom)
+            insets
+        }
+        setContentView(scroll)
     }
 
     override fun onResume() {
