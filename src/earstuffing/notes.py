@@ -96,9 +96,9 @@ def _clock(ms: int) -> str:
 
 def note_entry(sidecar: dict, transcript: str, how: str) -> str:
     when = datetime.fromisoformat(sidecar["recorded_at"]).astimezone().strftime("%Y-%m-%d %H:%M")
-    context = how
+    context = f"Matched by {how}."
     if sidecar.get("media_title") and sidecar.get("position_ms") is not None:
-        context += f"; playing \"{sidecar['media_title']}\" at {_clock(sidecar['position_ms'])}"
+        context += f" Recorded {_clock(sidecar['position_ms'])} into \"{sidecar['media_title']}\"."
     return f"## Note {sidecar['id']} ({when})\n\n_{context}_\n\n{transcript}\n\n"
 
 

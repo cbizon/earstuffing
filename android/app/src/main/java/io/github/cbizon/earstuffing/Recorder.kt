@@ -1,5 +1,7 @@
 package io.github.cbizon.earstuffing
 
+import android.Manifest
+import android.content.pm.PackageManager
 import android.media.AudioAttributes
 import android.media.AudioFocusRequest
 import android.media.AudioManager
@@ -31,6 +33,9 @@ class NoteRecorder(private val carContext: CarContext) {
     @Volatile private var running = false
 
     fun start(out: File) {
+        if (carContext.checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+            throw SecurityException("Microphone permission not granted")
+        }
         audioManager.requestAudioFocus(focus)
         val r = CarAudioRecord.create(carContext)
         record = r

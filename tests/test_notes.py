@@ -65,7 +65,7 @@ def test_file_note_and_processed(tmp_path):
     meta = library.read_meta(tmp_path, "hao")
     sidecar = {"id": "n1", "recorded_at": "2026-10-11T12:00:00+00:00", "media_title": "1 · T", "position_ms": 400000}
     entry = notes.note_entry(sidecar, "Paper 1: good point.", "spoken paper 1")
-    assert '"1 · T" at 6:40' in entry
+    assert '_Matched by spoken paper 1. Recorded 6:40 into "1 · T"._' in entry
     path = notes.file_note(tmp_path, meta, entry)
     assert path == tmp_path / "episodes" / "hao" / "notes.md"
     assert "Paper 1: good point." in path.read_text()
