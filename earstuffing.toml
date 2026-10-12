@@ -37,3 +37,12 @@ title = "Earstuffing"
 description = "Narrated explanations and assessments of research papers."
 author = "Chris Bizon"
 language = "en-us"
+
+[transcribe]
+# Azure deployment-scoped URL; the v1 API does not route transcription.
+deployment = "gpt-4o-transcribe"
+api_version = "2025-04-01-preview"
+
+[notes]
+bucket = "earstuffing-notes"
+prefix = "notes/"
