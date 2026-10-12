@@ -111,13 +111,26 @@ def episode_status(data_dir: Path, slug: str) -> str:
     return "rendered"
 
 
+def all_metas(data_dir: Path) -> list[dict]:
+    root = data_dir / "episodes"
+    if not root.exists():
+        return []
+    return [json.loads((d / META).read_text()) for d in root.iterdir() if (d / META).exists()]
+
+
+def next_number(data_dir: Path) -> int:
+    """Episodes get short sequential numbers so voice notes can refer to them."""
+    return max((m["number"] for m in all_metas(data_dir)), default=0) + 1
+
+
 def create_episode(data_dir: Path, meta: dict) -> Path:
     """Write meta.json for a new episode and return its directory."""
     d = episode_dir(data_dir, meta["slug"])
     if (d / META).exists():
         raise FileExistsError(f"Episode {meta['slug']} already exists at {d}")
+    number = next_number(data_dir)
     d.mkdir(parents=True)
-    meta = {**meta, "created_at": datetime.now(timezone.utc).isoformat()}
+    meta = {**meta, "number": number, "created_at": datetime.now(timezone.utc).isoformat()}
     (d / META).write_text(json.dumps(meta, indent=2, default=str) + "\n")
     return d
 
@@ -134,14 +147,7 @@ def update_meta(data_dir: Path, slug: str, **fields) -> dict:
 
 def rendered_episodes(data_dir: Path) -> list[dict]:
     """Metadata for every episode with audio, newest first."""
-    root = data_dir / "episodes"
-    if not root.exists():
-        return []
-    metas = [
-        json.loads((d / META).read_text())
-        for d in root.iterdir()
-        if (d / META).exists() and (d / AUDIO).exists()
-    ]
+    metas = [m for m in all_metas(data_dir) if (episode_dir(data_dir, m["slug"]) / AUDIO).exists()]
     for m in metas:
         if "rendered_at" not in m:
             raise ValueError(f"Episode {m['slug']} has audio but no rendered_at; re-render it")

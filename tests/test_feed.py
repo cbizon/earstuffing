@@ -5,9 +5,9 @@ from earstuffing.feed import ITUNES, build_feed
 FEED_CFG = {"title": "Earstuffing", "description": "d", "author": "A", "language": "en-us"}
 
 
-def episode(slug, rendered_at, authors=("Ann Lee",)):
+def episode(slug, rendered_at, authors=("Ann Lee",), number=1):
     return {
-        "slug": slug, "title": f"Paper {slug}", "authors": list(authors), "year": "2021",
+        "slug": slug, "number": number, "title": f"Paper {slug}", "authors": list(authors), "year": "2021",
         "venue": "Cell Syst.", "doi": "10.1/x", "url": "", "summary": "It finds things.",
         "rendered_at": rendered_at, "audio_bytes": 1234, "duration": 3725.4,
     }
@@ -15,7 +15,7 @@ def episode(slug, rendered_at, authors=("Ann Lee",)):
 
 def test_build_feed():
     xml = build_feed(
-        [episode("b", "2026-10-11T12:00:00+00:00", authors=["A", "B", "C", "D"]),
+        [episode("b", "2026-10-11T12:00:00+00:00", authors=["A", "B", "C", "D"], number=14),
          episode("a", "2026-10-10T12:00:00+00:00")],
         FEED_CFG,
         "https://pub.example.r2.dev/secret",
@@ -24,6 +24,8 @@ def test_build_feed():
     assert channel.find(f"{{{ITUNES}}}block").text == "Yes"
     items = channel.findall("item")
     assert [i.find("guid").text for i in items] == ["b", "a"]
+    assert items[0].find("title").text == "14 · Paper b"
+    assert items[0].find(f"{{{ITUNES}}}episode").text == "14"
     enc = items[0].find("enclosure")
     assert enc.get("url") == "https://pub.example.r2.dev/secret/episodes/b.mp3"
     assert enc.get("length") == "1234"

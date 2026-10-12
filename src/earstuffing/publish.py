@@ -22,14 +22,15 @@ def r2_client(r2: dict):
     )
 
 
-def _exists(client, bucket: str, key: str) -> bool:
+def _remote_rendered_at(client, bucket: str, key: str) -> str | None:
+    """The rendered-at stamp on an uploaded episode, or None if it is not uploaded."""
     try:
-        client.head_object(Bucket=bucket, Key=key)
+        head = client.head_object(Bucket=bucket, Key=key)
     except ClientError as e:
         if e.response["Error"]["Code"] in ("404", "NoSuchKey"):
-            return False
+            return None
         raise
-    return True
+    return head["Metadata"].get("rendered-at", "")
 
 
 def feed_base_url(r2: dict) -> str:
@@ -48,9 +49,13 @@ def publish(config: dict) -> tuple[list[str], str]:
     uploaded = []
     for ep in episodes:
         key = f"{r2['prefix']}/episodes/{ep['slug']}.mp3"
-        if not _exists(client, r2["bucket"], key):
+        # Re-rendered audio replaces the uploaded copy.
+        if _remote_rendered_at(client, r2["bucket"], key) != ep["rendered_at"]:
             path: Path = episode_dir(data_dir, ep["slug"]) / AUDIO
-            client.upload_file(str(path), r2["bucket"], key, ExtraArgs={"ContentType": "audio/mpeg"})
+            client.upload_file(
+                str(path), r2["bucket"], key,
+                ExtraArgs={"ContentType": "audio/mpeg", "Metadata": {"rendered-at": ep["rendered_at"]}},
+            )
             uploaded.append(ep["slug"])
 
     client.put_object(
