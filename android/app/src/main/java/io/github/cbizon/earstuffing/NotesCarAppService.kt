@@ -6,6 +6,7 @@ import android.content.pm.PackageManager
 import android.os.Handler
 import android.os.Looper
 import androidx.car.app.CarAppService
+import androidx.car.app.versioning.CarAppApiLevels
 import androidx.car.app.CarContext
 import androidx.car.app.CarToast
 import androidx.car.app.Screen
@@ -63,6 +64,11 @@ class NoteScreen(carContext: CarContext) : Screen(carContext) {
     }
 
     private fun start() {
+        if (carContext.carAppApiLevel < CarAppApiLevels.LEVEL_5) {
+            message = "This car's Android Auto is too old for microphone recording (level ${carContext.carAppApiLevel})."
+            invalidate()
+            return
+        }
         if (carContext.checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
             carContext.requestPermissions(listOf(Manifest.permission.RECORD_AUDIO)) { granted, _ ->
                 if (granted.isNotEmpty()) start() else {

@@ -5,14 +5,14 @@ plugins {
 
 android {
     namespace = "io.github.cbizon.earstuffing"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "io.github.cbizon.earstuffing"
         minSdk = 29
-        targetSdk = 35
-        versionCode = 4
-        versionName = "0.4"
+        targetSdk = 36
+        versionCode = 6
+        versionName = "0.6"
     }
 
     compileOptions {

@@ -13,10 +13,10 @@
         <meta-data
             android:name="com.google.android.gms.car.application"
             android:resource="@xml/automotive_app_desc" />
-        <!-- CarAudioRecord needs Car App API level 5. -->
+        <!-- CarAudioRecord needs Car App API level 5; that is checked at runtime in NoteScreen. -->
         <meta-data
             android:name="androidx.car.app.minCarApiLevel"
-            android:value="5" />
+            android:value="1" />
 
         <activity
             android:name=".SettingsActivity"
