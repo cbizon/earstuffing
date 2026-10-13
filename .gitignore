@@ -2,7 +2,7 @@
 __pycache__/
 *.pyc
 .pytest_cache/
-data/
+/data
 earstuffing.local.toml
 .claude/settings.local.json
 .DS_Store

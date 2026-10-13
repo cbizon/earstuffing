@@ -11,7 +11,10 @@ everything else.
   gitignored `earstuffing.local.toml`. Secrets are in the macOS keychain
   (`azure-openai`, `earstuffing-r2`), never in files. This repo is public: never
   commit the feed URL, prefix, or personal paths.
-- Episode data: `data/episodes/<slug>/` (gitignored) holding `meta.json`,
+- `data/` is a gitignored symlink to the user's synced Google Drive
+  (`My Drive/earstuffing`), so episode data, notes and discussions are backed
+  up and readable on the phone. Never commit it.
+- Episode data: `data/episodes/<slug>/` holding `meta.json`,
   `script.txt`, `summary.txt`, `episode.mp3`, and once there are voice notes,
   `notes.md` (transcribed notes) and `discussion.md` (replies and conclusions).
 - Voice notes come from the Android Auto app in `android/`, via the private
