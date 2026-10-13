@@ -45,7 +45,7 @@ api_version = "2025-04-01-preview"
 # Standing jargon for voice-note transcription, in addition to recent paper titles.
 vocabulary = [
     "LLM", "AMIE", "AMIE+", "AMIE 3", "ROBOKOP", "Horn rule", "knowledge graph",
-    "head coverage", "metapath", "Biolink", "Translator", "embedding", "GNN",
+    "head coverage", "metapath", "Biolink", "Translator", "embedding", "GNN", "Jev",
 ]
 
 [notes]
