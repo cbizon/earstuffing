@@ -5,3 +5,4 @@ __pycache__/
 data/
 earstuffing.local.toml
 .claude/settings.local.json
+.DS_Store
