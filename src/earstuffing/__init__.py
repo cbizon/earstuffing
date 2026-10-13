@@ -82,6 +82,15 @@ def cmd_publish(config: dict, args) -> None:
     print(json.dumps({"uploaded": uploaded, "feed": feed_url}, indent=2))
 
 
+def cmd_notes(config: dict, args) -> None:
+    from earstuffing.notes import fetch_and_file
+    from earstuffing.publish import r2_client
+
+    client = r2_client(config["r2"])
+    api_key = keychain_secret(config["tts"]["keychain_service"], config["tts"]["keychain_account"])
+    print(json.dumps(fetch_and_file(config, client, api_key), indent=2))
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(prog="earstuffing")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -104,8 +113,13 @@ def main() -> None:
 
     sub.add_parser("publish", help="Upload new audio and rewrite the feed on R2")
 
+    sub.add_parser("notes", help="Fetch, transcribe and file new voice notes")
+
     args = parser.parse_args()
     config = load_config()
-    {"pending": cmd_pending, "prepare": cmd_prepare, "render": cmd_render, "publish": cmd_publish}[
+    {
+        "pending": cmd_pending, "prepare": cmd_prepare, "render": cmd_render,
+        "publish": cmd_publish, "notes": cmd_notes,
+    }[
         args.command
     ](config, args)

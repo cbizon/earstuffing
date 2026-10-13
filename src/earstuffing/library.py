@@ -11,6 +11,8 @@ META = "meta.json"
 SCRIPT = "script.txt"
 SUMMARY = "summary.txt"
 AUDIO = "episode.mp3"
+NOTES = "notes.md"
+DISCUSSION = "discussion.md"
 
 
 def slugify(text: str) -> str:

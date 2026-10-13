@@ -1,0 +1,132 @@
+package io.github.cbizon.earstuffing
+
+import android.Manifest
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.os.Bundle
+import android.provider.Settings
+import android.text.InputType
+import android.widget.Button
+import android.widget.EditText
+import android.widget.LinearLayout
+import android.widget.ScrollView
+import android.widget.TextView
+import androidx.activity.ComponentActivity
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.IOException
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
+
+/** Phone-side setup: R2 credentials, permissions, and upload status. */
+class SettingsActivity : ComponentActivity() {
+    private lateinit var status: TextView
+    private val micPermission = registerForActivityResult(ActivityResultContracts.RequestPermission()) { refresh() }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        val pad = (16 * resources.displayMetrics.density).toInt()
+        val column = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(pad, pad, pad, pad)
+        }
+
+        fun field(label: String, key: String, default: String = "", secret: Boolean = false): EditText {
+            column.addView(TextView(this).apply { text = label })
+            return EditText(this).apply {
+                setText(Config.raw(this@SettingsActivity, key, default))
+                inputType = if (secret) {
+                    InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
+                } else InputType.TYPE_CLASS_TEXT
+                column.addView(this)
+            }
+        }
+
+        val account = field("R2 account ID", "account_id")
+        val bucket = field("Notes bucket", "bucket", "earstuffing-notes")
+        val keyId = field("Access key ID", "access_key_id")
+        val secret = field("Secret access key", "secret", secret = true)
+
+        fun button(label: String, onClick: () -> Unit) =
+            column.addView(Button(this).apply { text = label; setOnClickListener { onClick() } })
+
+        fun save() = Config.save(this, Config(account.text.toString(), bucket.text.toString(),
+            keyId.text.toString(), secret.text.toString()))
+
+        button("Save and upload pending notes") {
+            save()
+            UploadWorker.enqueue(this)
+            refresh()
+        }
+        button("Test connection") {
+            save()
+            testConnection()
+        }
+        button("Allow microphone") { micPermission.launch(Manifest.permission.RECORD_AUDIO) }
+        column.addView(TextView(this).apply {
+            text = "Reading what's playing uses Android's notification access; the app never reads " +
+                "notifications. If the switch is grayed out: Settings > Apps > Earstuffing Notes > " +
+                "\u22ee menu > Allow restricted settings, then try again."
+        })
+        button("Allow reading what's playing (notification access)") {
+            startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
+        }
+        button("Refresh status") { refresh() }
+
+        status = TextView(this).apply { setPadding(0, pad, 0, 0) }
+        column.addView(status)
+        val scroll = ScrollView(this).apply { addView(column) }
+        // Android 15 draws edge to edge: keep content clear of the status bar, nav bar and keyboard.
+        ViewCompat.setOnApplyWindowInsetsListener(scroll) { v, insets ->
+            val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.ime())
+            v.setPadding(bars.left, bars.top, bars.right, bars.bottom)
+            insets
+        }
+        setContentView(scroll)
+    }
+
+    override fun onResume() {
+        super.onResume()
+        refresh()
+    }
+
+    /** Upload and delete a small probe file to prove the account, bucket and key all work. */
+    private fun testConnection() {
+        val config = Config.load(this)
+        if (config == null) {
+            Status.set(this, "Test failed: fill in all four settings first")
+            refresh()
+            return
+        }
+        Status.set(this, "Testing connection…")
+        refresh()
+        lifecycleScope.launch {
+            val result = withContext(Dispatchers.IO) {
+                val key = "probes/${NoteStore.newId()}.txt"
+                try {
+                    UploadWorker.put(config, key, "probe".toByteArray(), "text/plain")
+                    UploadWorker.delete(config, key)
+                    "Connection OK: uploaded and deleted a test file"
+                } catch (e: IOException) {
+                    "Connection test failed: ${e.message}"
+                }
+            }
+            Status.set(this@SettingsActivity, result)
+            refresh()
+        }
+    }
+
+    private fun refresh() {
+        val mic = checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
+        status.text = listOf(
+            "Settings: " + if (Config.load(this) != null) "complete" else "incomplete",
+            "Microphone: " + if (mic) "allowed" else "not allowed",
+            "Now-playing access: " + if (hasMediaAccess(this)) "allowed" else "not allowed",
+            "Notes waiting to upload: ${NoteStore.pending(this).size}",
+            "Last upload: ${Status.get(this)}",
+        ).joinToString("\n")
+    }
+}
