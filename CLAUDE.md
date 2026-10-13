@@ -53,3 +53,29 @@ first sentence), papers or notes skipped and why, and any errors. Do not hide fa
    error verbatim.
 
 Never process manuscripts under confidential peer review.
+
+## Android app releases
+
+Android Auto only shows Car App Library apps installed from Google Play
+("Unknown sources" does not apply to them), so the notes app ships through the
+Play Console internal testing track (package `io.github.cbizon.earstuffing`).
+
+1. Bump `versionCode` (and `versionName`) in `android/app/build.gradle.kts`;
+   Play rejects a reused versionCode.
+2. Build and test: `cd android && JAVA_HOME=/opt/homebrew/opt/openjdk@17 ./gradlew lintDebug testDebugUnitTest`.
+3. Build the signed bundle with the upload key, whose password is in the
+   keychain item `earstuffing-android-keystore`:
+   ```
+   PW=$(security find-generic-password -s earstuffing-android-keystore -a earstuffing -w)
+   ./gradlew bundleRelease \
+     -Pandroid.injected.signing.store.file=$HOME/.android/earstuffing-release.jks \
+     -Pandroid.injected.signing.store.password="$PW" \
+     -Pandroid.injected.signing.key.alias=earstuffing \
+     -Pandroid.injected.signing.key.password="$PW"
+   ```
+4. Copy `app/build/outputs/bundle/release/app-release.aab` to the gitignored
+   `android/dist/`; the user uploads it as a new internal testing release and the
+   phone updates from Play.
+
+Never commit the keystore, its password, or R2 credentials. Losing the upload
+key is recoverable through Play Console (upload key reset), not by re-signing.
