@@ -19,7 +19,10 @@ ONES = (
     "fourteen fifteen sixteen seventeen eighteen nineteen"
 ).split()
 TENS = {"twenty": 20, "thirty": 30, "forty": 40, "fifty": 50, "sixty": 60, "seventy": 70, "eighty": 80, "ninety": 90}
-SPOKEN_PAPER = re.compile(r"^\W*paper\s+(?:number\s+)?([a-z0-9]+(?:[\s-][a-z]+)?)", re.IGNORECASE)
+SPOKEN_PAPER = re.compile(r"\bpaper\s+(?:number\s+)?([a-z0-9]+(?:[\s-][a-z]+)?)", re.IGNORECASE)
+# Only a reference near the start says which paper a note is about ("For paper two, ..."),
+# not a passing mention later on.
+LEAD_WORDS = 12
 TITLE_NUMBER = re.compile(r"^\s*(\d+)\s*·")
 
 
@@ -39,7 +42,8 @@ def words_to_number(text: str) -> int | None:
 
 
 def spoken_number(transcript: str) -> int | None:
-    m = SPOKEN_PAPER.match(transcript)
+    lead = " ".join(transcript.split()[:LEAD_WORDS])
+    m = SPOKEN_PAPER.search(lead)
     return words_to_number(m.group(1)) if m else None
 
 
@@ -60,10 +64,12 @@ def match_episode(sidecar: dict, transcript: str, metas: list[dict]) -> tuple[di
     return None, "no paper number and nothing recognizable playing"
 
 
-def vocabulary_prompt(metas: list[dict], limit: int = 800) -> str:
-    """Recent paper titles as transcription hints for technical vocabulary."""
+def vocabulary_prompt(metas: list[dict], terms: list[str], limit: int = 1000) -> str:
+    """Standing terms plus recent paper titles as transcription hints."""
     recent = sorted(metas, key=lambda m: m["number"], reverse=True)
-    prompt = "Notes on research papers, often starting with 'Paper N'."
+    prompt = "Notes on research papers, often mentioning 'paper N'."
+    if terms:
+        prompt += " Terms: " + ", ".join(terms) + "."
     for m in recent:
         addition = f" {m['title']}."
         if len(prompt) + len(addition) > limit:
@@ -131,7 +137,7 @@ def fetch_and_file(config: dict, client, api_key: str) -> list[dict]:
     notes_cfg, data_dir = config["notes"], config["paths"]["data_dir"]
     done = processed_ids(data_dir)
     metas = library.all_metas(data_dir)
-    prompt = vocabulary_prompt(metas)
+    prompt = vocabulary_prompt(metas, config["transcribe"].get("vocabulary", []))
     audio_dir = data_dir / "notes" / "audio"
     audio_dir.mkdir(parents=True, exist_ok=True)
 

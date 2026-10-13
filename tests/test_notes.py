@@ -25,7 +25,9 @@ def test_words_to_number(text, n):
 @pytest.mark.parametrize(
     "transcript, n",
     [("Paper 2: I wonder whether", 2), ("paper fourteen, how does", 14), ("Paper number 3.", 3),
-     ("So, paper two is weak", None), ("I wonder about papers", None)],
+     ("For paper two, I think", 2), ("Another note for paper two: I'm curious", 2),
+     ("So, paper two is weak", 2), ("I wonder about papers", None),
+     ("This one is long and only much later in the note do I say compare to paper one", None)],
 )
 def test_spoken_number(transcript, n):
     assert notes.spoken_number(transcript) == n
@@ -55,9 +57,10 @@ def test_no_match():
 
 
 def test_vocabulary_prompt_newest_first_and_capped():
-    prompt = notes.vocabulary_prompt(METAS, limit=100)
+    prompt = notes.vocabulary_prompt(METAS, ["AMIE", "LLM"], limit=120)
+    assert "Terms: AMIE, LLM." in prompt
     assert "Something else" in prompt and "Explaining" not in prompt
-    assert len(prompt) <= 100
+    assert len(prompt) <= 120
 
 
 def test_file_note_and_processed(tmp_path):
