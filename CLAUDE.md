@@ -14,6 +14,9 @@ everything else.
 - `data/` is a gitignored symlink to the user's synced Google Drive
   (`My Drive/earstuffing`), so episode data, notes and discussions are backed
   up and readable on the phone. Never commit it.
+- Both `data/` and `earstuffing.local.toml` exist only in the main checkout,
+  not in worktrees; `config.py` resolves them from the main checkout via git,
+  so the CLI works from any worktree.
 - Episode data: `data/episodes/<slug>/` holding `meta.json`,
   `script.txt`, `summary.txt`, `episode.mp3`, and once there are voice notes,
   `notes.md` (transcribed notes) and `discussion.md` (replies and conclusions).

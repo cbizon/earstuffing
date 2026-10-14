@@ -1,6 +1,8 @@
+import subprocess
+
 import pytest
 
-from earstuffing.config import load_config, merge
+from earstuffing.config import load_config, main_checkout, merge
 
 
 def test_merge_nested():
@@ -18,3 +20,15 @@ def test_local_overrides_and_required(tmp_path):
     assert config["paths"]["bib_file"].as_posix() == "/b.bib"
     assert config["paths"]["paperpile_dir"].name == "pp"
     assert config["tts"]["endpoint"] == "https://e"
+
+
+def test_main_checkout_from_worktree(tmp_path):
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    git = ["git", "-c", "user.name=t", "-c", "user.email=t@t"]
+    subprocess.run([*git, "-C", str(repo), "init", "-q"], check=True)
+    subprocess.run([*git, "-C", str(repo), "commit", "-q", "--allow-empty", "-m", "init"], check=True)
+    worktree = tmp_path / "wt"
+    subprocess.run([*git, "-C", str(repo), "worktree", "add", "-q", str(worktree)], check=True)
+    assert main_checkout(repo) == repo.resolve()
+    assert main_checkout(worktree) == repo.resolve()
