@@ -48,11 +48,12 @@ def cmd_prepare(config: dict, args) -> None:
         }
     meta["pdf"] = str(pdf) if pdf else None
     d = library.create_episode(paths["data_dir"], meta)
+    library.write_hub(paths["data_dir"], meta["slug"])
     print(json.dumps({"episode_dir": str(d), **meta}, indent=2))
 
 
 def cmd_render(config: dict, args) -> None:
-    data_dir = config["paths"]["data_dir"]
+    data_dir, audio_cache = config["paths"]["data_dir"], config["paths"]["audio_cache"]
     d = library.episode_dir(data_dir, args.slug)
     script = (d / library.SCRIPT).read_text().strip()
     summary = (d / library.SUMMARY).read_text().strip()
@@ -60,7 +61,8 @@ def cmd_render(config: dict, args) -> None:
         sys.exit(f"{d} has an empty script or summary")
     number = library.read_meta(data_dir, args.slug)["number"]
     spoken = f"Paper {number}.\n\n{script}\n\nThat was paper {number}."
-    out = d / library.AUDIO
+    audio_cache.mkdir(parents=True, exist_ok=True)
+    out = library.cached_audio(audio_cache, args.slug)
     api_key = keychain_secret(config["tts"]["keychain_service"], config["tts"]["keychain_account"])
     duration = tts.render(spoken, out, config["tts"], api_key)
     meta = library.update_meta(
@@ -72,6 +74,7 @@ def cmd_render(config: dict, args) -> None:
         rendered_at=datetime.now(timezone.utc).isoformat(),
         script_words=len(script.split()),
     )
+    library.write_hub(data_dir, args.slug)
     print(json.dumps({"audio": str(out), "minutes": round(duration / 60, 1), "words": meta["script_words"]}))
 
 
@@ -80,6 +83,11 @@ def cmd_publish(config: dict, args) -> None:
 
     uploaded, feed_url = publish(config)
     print(json.dumps({"uploaded": uploaded, "feed": feed_url}, indent=2))
+
+
+def cmd_hubs(config: dict, args) -> None:
+    data_dir = config["paths"]["data_dir"]
+    print(json.dumps([str(library.write_hub(data_dir, m["slug"])) for m in library.all_metas(data_dir)], indent=2))
 
 
 def cmd_notes(config: dict, args) -> None:
@@ -108,18 +116,20 @@ def main() -> None:
     p.add_argument("--url")
     p.add_argument("--slug")
 
-    r = sub.add_parser("render", help="Render an episode's script.txt to audio")
+    r = sub.add_parser("render", help="Render an episode's script.md to audio")
     r.add_argument("slug")
 
     sub.add_parser("publish", help="Upload new audio and rewrite the feed on R2")
 
     sub.add_parser("notes", help="Fetch, transcribe and file new voice notes")
 
+    sub.add_parser("hubs", help="Regenerate every paper's Obsidian hub note")
+
     args = parser.parse_args()
     config = load_config()
     {
         "pending": cmd_pending, "prepare": cmd_prepare, "render": cmd_render,
-        "publish": cmd_publish, "notes": cmd_notes,
+        "publish": cmd_publish, "notes": cmd_notes, "hubs": cmd_hubs,
     }[
         args.command
     ](config, args)

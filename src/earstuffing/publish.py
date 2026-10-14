@@ -7,7 +7,7 @@ from botocore.exceptions import ClientError
 
 from earstuffing.config import keychain_account, keychain_secret
 from earstuffing.feed import build_feed
-from earstuffing.library import AUDIO, episode_dir, rendered_episodes
+from earstuffing.library import cached_audio, rendered_episodes
 
 
 def r2_client(r2: dict):
@@ -40,8 +40,11 @@ def feed_base_url(r2: dict) -> str:
 
 
 def publish(config: dict) -> tuple[list[str], str]:
-    """Upload any missing episode audio, then rewrite the feed. Returns (uploaded slugs, feed URL)."""
-    r2, data_dir = config["r2"], config["paths"]["data_dir"]
+    """Upload any missing episode audio, then rewrite the feed. Returns (uploaded slugs, feed URL).
+
+    Local audio is transient: it is deleted from the cache once R2 has the current render.
+    """
+    r2, data_dir, audio_cache = config["r2"], config["paths"]["data_dir"], config["paths"]["audio_cache"]
     base_url = feed_base_url(r2)
     client = r2_client(r2)
     episodes = rendered_episodes(data_dir)
@@ -49,14 +52,17 @@ def publish(config: dict) -> tuple[list[str], str]:
     uploaded = []
     for ep in episodes:
         key = f"{r2['prefix']}/episodes/{ep['slug']}.mp3"
+        path: Path = cached_audio(audio_cache, ep["slug"])
         # Re-rendered audio replaces the uploaded copy.
         if _remote_rendered_at(client, r2["bucket"], key) != ep["rendered_at"]:
-            path: Path = episode_dir(data_dir, ep["slug"]) / AUDIO
+            if not path.exists():
+                raise FileNotFoundError(f"{ep['slug']} is not on R2 and {path} is gone; re-render it")
             client.upload_file(
                 str(path), r2["bucket"], key,
                 ExtraArgs={"ContentType": "audio/mpeg", "Metadata": {"rendered-at": ep["rendered_at"]}},
             )
             uploaded.append(ep["slug"])
+        path.unlink(missing_ok=True)
 
     client.put_object(
         Bucket=r2["bucket"],

@@ -9,6 +9,8 @@ paperpile_dir = ""
 # BibTeX file kept current by Paperpile's auto-export of the "Listen" label.
 bib_file = ""
 data_dir = "data"
+# Rendered audio waits here until publish uploads it, then is deleted.
+audio_cache = "~/Library/Caches/earstuffing"
 
 [tts]
 # Azure OpenAI v1 endpoint, e.g. "https://<resource>.openai.azure.com/openai/v1"
