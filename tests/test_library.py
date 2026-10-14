@@ -99,9 +99,38 @@ def test_episode_lifecycle(tmp_path):
     (d / library.SCRIPT).write_text("Hello.")
     (d / library.SUMMARY).write_text("Summary.")
     assert library.episode_status(tmp_path, "x2020") == "needs_audio"
-    (d / library.AUDIO).write_bytes(b"")
-    assert library.episode_status(tmp_path, "x2020") == "rendered"
-    with pytest.raises(ValueError, match="rendered_at"):
-        library.rendered_episodes(tmp_path)
+    assert library.rendered_episodes(tmp_path) == []
     library.update_meta(tmp_path, "x2020", rendered_at="2026-10-11T12:00:00+00:00")
+    # Rendered is recorded in meta.json; no local audio is kept.
+    assert library.episode_status(tmp_path, "x2020") == "rendered"
     assert [m["slug"] for m in library.rendered_episodes(tmp_path)] == ["x2020"]
+
+
+def test_hub_name_is_obsidian_safe():
+    meta = {"number": 3, "title": "ATOMIC: An Atlas of [If-Then] Reasoning?  " + "word " * 50}
+    name = library.hub_name(meta)
+    assert name.startswith("Paper 3 - ATOMIC An Atlas of If-Then Reasoning word")
+    assert not library.UNSAFE_NAME.search(name)
+    assert len(name) <= 160 and not name.endswith(" ")
+
+
+def test_write_hub(tmp_path):
+    meta = {"slug": "x2020", "title": "Old title", "authors": ["A B", "C D"], "year": "2020",
+            "venue": "", "doi": "10.1/x", "url": "", "pdf": "/papers/My Paper.pdf"}
+    d = library.create_episode(tmp_path, meta)
+    stale = library.write_hub(tmp_path, "x2020")
+    assert stale.name == "Paper 1 - Old title.md"
+    text = stale.read_text()
+    assert text.startswith("---\nnumber: 1\n")
+    assert '  - "Paper 1"' in text and "[PDF](<file:///papers/My%20Paper.pdf>)" in text
+    assert "Script" not in text and "## Discussion" not in text
+
+    library.update_meta(tmp_path, "x2020", title="New title", summary="It works.")
+    (d / library.SCRIPT).write_text("Hello.")
+    (d / library.DISCUSSION).write_text("# Discussion\n")
+    hub = library.write_hub(tmp_path, "x2020")
+    assert hub.name == "Paper 1 - New title.md" and not stale.exists()
+    text = hub.read_text()
+    assert "It works." in text
+    assert "> ![[episodes/x2020/script.md]]" in text
+    assert "![[episodes/x2020/discussion.md]]" in text and "## Voice notes" not in text

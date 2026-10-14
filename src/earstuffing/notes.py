@@ -2,11 +2,13 @@
 
 The phone app uploads `<prefix><id>.wav` followed by `<prefix><id>.json`, a sidecar
 with what Pocket Casts was playing. The sidecar is written last, so its presence
-marks a complete upload.
+marks a complete upload. Recordings are transient: once a note is transcribed and
+filed, both objects are deleted from the bucket and no local copy is kept.
 """
 
 import json
 import re
+import tempfile
 from datetime import datetime
 from pathlib import Path
 
@@ -133,34 +135,39 @@ def mark_processed(data_dir: Path, note_id: str) -> None:
 
 
 def fetch_and_file(config: dict, client, api_key: str) -> list[dict]:
-    """Process every complete, unprocessed note in the bucket. Returns a summary per note."""
+    """Process every complete note in the bucket, then delete it. Returns a summary per new note."""
     notes_cfg, data_dir = config["notes"], config["paths"]["data_dir"]
+    bucket = notes_cfg["bucket"]
     done = processed_ids(data_dir)
     metas = library.all_metas(data_dir)
     prompt = vocabulary_prompt(metas, config["transcribe"].get("vocabulary", []))
-    audio_dir = data_dir / "notes" / "audio"
-    audio_dir.mkdir(parents=True, exist_ok=True)
 
     summary = []
     paginator = client.get_paginator("list_objects_v2")
-    for page in paginator.paginate(Bucket=notes_cfg["bucket"], Prefix=notes_cfg["prefix"]):
-        for obj in page.get("Contents", []):
-            key = obj["Key"]
-            if not key.endswith(".json"):
-                continue
-            sidecar = json.loads(client.get_object(Bucket=notes_cfg["bucket"], Key=key)["Body"].read())
-            if sidecar["id"] in done:
-                continue
-            audio_key = key.removesuffix(".json") + Path(sidecar["audio"]).suffix
-            audio = audio_dir / Path(audio_key).name
-            client.download_file(notes_cfg["bucket"], audio_key, str(audio))
-            transcript = transcribe(audio, config["transcribe"], config["tts"]["endpoint"], api_key, prompt)
-            meta, how = match_episode(sidecar, transcript, metas)
-            path = file_note(data_dir, meta, note_entry(sidecar, transcript, how))
-            mark_processed(data_dir, sidecar["id"])
-            summary.append(
-                {"id": sidecar["id"], "paper": meta["number"] if meta else None,
-                 "slug": meta["slug"] if meta else None, "matched_by": how,
-                 "file": str(path), "transcript": transcript}
-            )
+    with tempfile.TemporaryDirectory() as tmp:
+        for page in paginator.paginate(Bucket=bucket, Prefix=notes_cfg["prefix"]):
+            for obj in page.get("Contents", []):
+                key = obj["Key"]
+                if not key.endswith(".json"):
+                    continue
+                sidecar = json.loads(client.get_object(Bucket=bucket, Key=key)["Body"].read())
+                audio_key = key.removesuffix(".json") + Path(sidecar["audio"]).suffix
+                if sidecar["id"] not in done:
+                    audio = Path(tmp) / Path(audio_key).name
+                    client.download_file(bucket, audio_key, str(audio))
+                    transcript = transcribe(audio, config["transcribe"], config["tts"]["endpoint"], api_key, prompt)
+                    meta, how = match_episode(sidecar, transcript, metas)
+                    path = file_note(data_dir, meta, note_entry(sidecar, transcript, how))
+                    mark_processed(data_dir, sidecar["id"])
+                    if meta:
+                        library.write_hub(data_dir, meta["slug"])
+                    summary.append(
+                        {"id": sidecar["id"], "paper": meta["number"] if meta else None,
+                         "slug": meta["slug"] if meta else None, "matched_by": how,
+                         "file": str(path), "transcript": transcript}
+                    )
+                # Only filed (processed) notes reach here; the transcript is now the record.
+                result = client.delete_objects(Bucket=bucket, Delete={"Objects": [{"Key": audio_key}, {"Key": key}]})
+                if result.get("Errors"):
+                    raise RuntimeError(f"Could not delete note {sidecar['id']} from {bucket}: {result['Errors']}")
     return summary

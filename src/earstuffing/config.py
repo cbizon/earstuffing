@@ -46,7 +46,7 @@ def load_config(path: Path = CONFIG_PATH, local_path: Path = LOCAL_CONFIG_PATH) 
     if missing:
         raise RuntimeError(f"Set {', '.join(missing)} in {local_path.name}")
     paths = config["paths"]
-    for key in ("paperpile_dir", "bib_file"):
+    for key in ("paperpile_dir", "bib_file", "audio_cache"):
         paths[key] = Path(paths[key]).expanduser()
     data_dir = Path(paths["data_dir"]).expanduser()
     paths["data_dir"] = data_dir if data_dir.is_absolute() else MAIN_ROOT / data_dir

@@ -11,7 +11,7 @@ def test_merge_nested():
 
 def test_local_overrides_and_required(tmp_path):
     base = tmp_path / "base.toml"
-    base.write_text('[paths]\npaperpile_dir = ""\nbib_file = ""\ndata_dir = "data"\n[tts]\nendpoint = ""\n')
+    base.write_text('[paths]\npaperpile_dir = ""\nbib_file = ""\ndata_dir = "data"\naudio_cache = "~/c"\n[tts]\nendpoint = ""\n')
     local = tmp_path / "local.toml"
     with pytest.raises(RuntimeError, match="paths.paperpile_dir, paths.bib_file, tts.endpoint"):
         load_config(base, local)
