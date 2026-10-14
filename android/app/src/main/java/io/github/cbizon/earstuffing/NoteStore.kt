@@ -37,6 +37,10 @@ object NoteStore {
         File(dir(context), "$id.json").writeText(sidecar.toString(2))
     }
 
+    fun discard(context: Context, id: String) {
+        pcm(context, id).delete()
+    }
+
     /** Complete notes (sidecar present), oldest first. */
     fun pending(context: Context): List<String> =
         dir(context).listFiles { f -> f.name.endsWith(".json") }!!.map { it.name.removeSuffix(".json") }.sorted()

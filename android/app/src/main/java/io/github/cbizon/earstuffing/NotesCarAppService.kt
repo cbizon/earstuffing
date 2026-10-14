@@ -28,38 +28,67 @@ class NotesCarAppService : CarAppService() {
     }
 }
 
-/** One button: Record, then Stop. Notes auto-stop after five minutes in case you forget. */
+/**
+ * Opening the app starts recording; Stop saves and returns to the dashboard, Discard drops it.
+ * There is deliberately no silence detection, so thoughtful pauses never end a note. The only
+ * automatic stop is a ten-minute cap for a forgotten recording.
+ */
 class NoteScreen(carContext: CarContext) : Screen(carContext) {
-    private val maxMs = 5 * 60 * 1000L
+    private val maxMs = 10 * 60 * 1000L
     private val handler = Handler(Looper.getMainLooper())
-    private val autoStop = Runnable { stop() }
+    private val autoStop = Runnable { finishNote(save = true) }
 
     private var recorder: NoteRecorder? = null
+    private var autoStarted = false
     private var id = ""
     private var startedAt = Instant.EPOCH
     private var media: NowPlaying? = null
-    private var message = "Tap Record, talk, then tap Stop."
+    private var message = ""
 
     init {
         lifecycle.addObserver(object : DefaultLifecycleObserver {
+            override fun onStart(owner: LifecycleOwner) {
+                if (!autoStarted) {
+                    autoStarted = true
+                    start()
+                }
+            }
+
+            // Leaving mid-note (e.g. the session ends) keeps what was said.
             override fun onDestroy(owner: LifecycleOwner) {
-                if (recorder != null) stop()
+                if (recorder != null) finishNote(save = true, close = false)
             }
         })
     }
 
     override fun onGetTemplate(): Template {
-        val recording = recorder != null
-        val action = Action.Builder()
-            .setTitle(if (recording) "Stop" else "Record")
+        if (recorder != null) {
+            val stop = Action.Builder()
+                .setTitle("Stop")
+                .setFlags(Action.FLAG_PRIMARY)
+                .setOnClickListener { finishNote(save = true) }
+                .build()
+            val discard = Action.Builder()
+                .setTitle("Discard")
+                .setOnClickListener { finishNote(save = false) }
+                .build()
+            return MessageTemplate.Builder("Recording… ${media?.title ?: ""}".trim())
+                .setTitle("Recording note")
+                .setHeaderAction(Action.APP_ICON)
+                .addAction(stop)
+                .addAction(discard)
+                .build()
+        }
+        // Only reached when recording could not start.
+        val retry = Action.Builder()
+            .setTitle("Record")
             .setFlags(Action.FLAG_PRIMARY)
-            .setOnClickListener { if (recording) stop() else start() }
+            .setOnClickListener { start() }
             .build()
-        val text = if (recording) "Recording… ${media?.title ?: ""}".trim() else message
-        return MessageTemplate.Builder(text)
-            .setTitle(if (recording) "Recording note" else "Earstuffing note")
+        return MessageTemplate.Builder(message.ifEmpty { "Starting…" })
+            .setTitle("Earstuffing note")
             .setHeaderAction(Action.APP_ICON)
-            .addAction(action)
+            .addAction(retry)
             .build()
     }
 
@@ -86,16 +115,22 @@ class NoteScreen(carContext: CarContext) : Screen(carContext) {
         invalidate()
     }
 
-    private fun stop() {
+    private fun finishNote(save: Boolean, close: Boolean = true) {
         val r = recorder ?: return
         handler.removeCallbacks(autoStop)
         r.stop()
         recorder = null
-        val durationMs = Instant.now().toEpochMilli() - startedAt.toEpochMilli()
-        NoteStore.finish(carContext, id, startedAt, durationMs, media)
-        UploadWorker.enqueue(carContext)
-        message = "Saved${media?.title?.let { " for \"$it\"" } ?: ""}. Tap Record for another."
-        CarToast.makeText(carContext, "Note saved", CarToast.LENGTH_SHORT).show()
-        invalidate()
+        if (save) {
+            val durationMs = Instant.now().toEpochMilli() - startedAt.toEpochMilli()
+            NoteStore.finish(carContext, id, startedAt, durationMs, media)
+            UploadWorker.enqueue(carContext)
+        } else {
+            NoteStore.discard(carContext, id)
+        }
+        if (close) {
+            CarToast.makeText(carContext, if (save) "Note saved" else "Note discarded", CarToast.LENGTH_SHORT).show()
+            // Back to the map and media dashboard.
+            carContext.finishCarApp()
+        }
     }
 }

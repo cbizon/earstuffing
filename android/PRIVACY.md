@@ -4,7 +4,8 @@ Earstuffing Notes is a personal tool for recording short voice notes while
 listening to podcasts in the car.
 
 - **What it records:** audio from the car or phone microphone, only between
-  pressing Record and Stop (or after five minutes, whichever comes first).
+  opening the note screen and pressing Stop or Discard (or after ten
+  minutes, whichever comes first). Discarded recordings are deleted.
 - **What else it reads:** the title, show name and playback position of the
   podcast that is playing when you press Record. It uses Android's notification
   access only to read this media information; it does not read notifications.
