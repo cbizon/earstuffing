@@ -5,8 +5,26 @@ import tomllib
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
+
+
+def main_checkout(root: Path) -> Path:
+    """Return the main checkout of the repository containing root.
+
+    Gitignored files (earstuffing.local.toml and the data/ symlink) exist only
+    in the main checkout, not in worktrees, so they are resolved from there.
+    """
+    common_dir = subprocess.run(
+        ["git", "-C", str(root), "rev-parse", "--path-format=absolute", "--git-common-dir"],
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout.strip()
+    return Path(common_dir).parent
+
+
+MAIN_ROOT = main_checkout(PROJECT_ROOT)
 CONFIG_PATH = PROJECT_ROOT / "earstuffing.toml"
-LOCAL_CONFIG_PATH = PROJECT_ROOT / "earstuffing.local.toml"
+LOCAL_CONFIG_PATH = MAIN_ROOT / "earstuffing.local.toml"
 REQUIRED = [("paths", "paperpile_dir"), ("paths", "bib_file"), ("tts", "endpoint")]
 
 
@@ -31,7 +49,7 @@ def load_config(path: Path = CONFIG_PATH, local_path: Path = LOCAL_CONFIG_PATH) 
     for key in ("paperpile_dir", "bib_file"):
         paths[key] = Path(paths[key]).expanduser()
     data_dir = Path(paths["data_dir"]).expanduser()
-    paths["data_dir"] = data_dir if data_dir.is_absolute() else PROJECT_ROOT / data_dir
+    paths["data_dir"] = data_dir if data_dir.is_absolute() else MAIN_ROOT / data_dir
     return config
 
 
