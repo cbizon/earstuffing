@@ -22,6 +22,26 @@ def main_checkout(root: Path) -> Path:
     return Path(common_dir).parent
 
 
+def require_current(root: Path, remote: str = "origin", branch: str = "main") -> None:
+    """Fail if the checkout at root is missing commits from remote/branch.
+
+    PRs merge on GitHub, which never updates a local checkout, so the CLI could
+    otherwise run stale code against current data.
+    """
+    subprocess.run(["git", "-C", str(root), "fetch", "-q", remote, branch], capture_output=True, text=True, check=True)
+    behind = subprocess.run(
+        ["git", "-C", str(root), "rev-list", "--count", f"HEAD..{remote}/{branch}"],
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout.strip()
+    if behind != "0":
+        raise RuntimeError(
+            f"{root} is {behind} commit(s) behind {remote}/{branch}; "
+            f"run `git -C {root} pull --ff-only` (or merge {branch} into this branch) first"
+        )
+
+
 MAIN_ROOT = main_checkout(PROJECT_ROOT)
 CONFIG_PATH = PROJECT_ROOT / "earstuffing.toml"
 LOCAL_CONFIG_PATH = MAIN_ROOT / "earstuffing.local.toml"

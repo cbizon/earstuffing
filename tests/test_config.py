@@ -2,7 +2,7 @@ import subprocess
 
 import pytest
 
-from earstuffing.config import load_config, main_checkout, merge
+from earstuffing.config import load_config, main_checkout, merge, require_current
 
 
 def test_merge_nested():
@@ -32,3 +32,25 @@ def test_main_checkout_from_worktree(tmp_path):
     subprocess.run([*git, "-C", str(repo), "worktree", "add", "-q", str(worktree)], check=True)
     assert main_checkout(repo) == repo.resolve()
     assert main_checkout(worktree) == repo.resolve()
+
+
+def test_require_current(tmp_path):
+    git = ["git", "-c", "user.name=t", "-c", "user.email=t@t"]
+    origin = tmp_path / "origin.git"
+    subprocess.run([*git, "init", "-q", "--bare", "-b", "main", str(origin)], check=True)
+    local, other = tmp_path / "local", tmp_path / "other"
+    for clone in (local, other):
+        subprocess.run([*git, "clone", "-q", str(origin), str(clone)], check=True, capture_output=True)
+    subprocess.run([*git, "-C", str(other), "commit", "-q", "--allow-empty", "-m", "one"], check=True)
+    subprocess.run([*git, "-C", str(other), "push", "-q", "origin", "HEAD:main"], check=True)
+    subprocess.run([*git, "-C", str(local), "pull", "-q", "origin", "main"], check=True)
+    require_current(local)
+
+    subprocess.run([*git, "-C", str(other), "commit", "-q", "--allow-empty", "-m", "two"], check=True)
+    subprocess.run([*git, "-C", str(other), "push", "-q", "origin", "HEAD:main"], check=True)
+    with pytest.raises(RuntimeError, match="1 commit\\(s\\) behind origin/main"):
+        require_current(local)
+    # Local commits ahead of origin are fine.
+    subprocess.run([*git, "-C", str(local), "pull", "-q", "origin", "main"], check=True)
+    subprocess.run([*git, "-C", str(local), "commit", "-q", "--allow-empty", "-m", "local"], check=True)
+    require_current(local)

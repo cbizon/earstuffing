@@ -6,7 +6,7 @@ import sys
 from datetime import datetime, timezone
 
 from earstuffing import library, tts
-from earstuffing.config import keychain_secret, load_config
+from earstuffing.config import PROJECT_ROOT, keychain_secret, load_config, require_current
 
 
 def cmd_pending(config: dict, args) -> None:
@@ -126,6 +126,7 @@ def main() -> None:
     sub.add_parser("hubs", help="Regenerate every paper's Obsidian hub note")
 
     args = parser.parse_args()
+    require_current(PROJECT_ROOT)
     config = load_config()
     {
         "pending": cmd_pending, "prepare": cmd_prepare, "render": cmd_render,

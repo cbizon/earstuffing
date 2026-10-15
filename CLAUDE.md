@@ -31,6 +31,9 @@ everything else.
 - Audio is transient. `render` writes to `paths.audio_cache` (outside Drive)
   and `publish` deletes it once R2 has it. `notes` deletes each recording from
   the notes bucket once it is transcribed and filed.
+- Every CLI command first fetches `origin/main` and refuses to run if the
+  checkout is behind it, since PRs merge on GitHub and never update the local
+  checkout. Fix with `git pull --ff-only` in the main checkout.
 - Voice notes come from the Android Auto app in `android/`, via the private
   `earstuffing-notes` bucket. Unmatched notes go to `data/notes/unmatched.md`.
 - `/paper N` opens a paper for discussion.
