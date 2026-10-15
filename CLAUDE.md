@@ -13,7 +13,7 @@ everything else.
   commit the feed URL, prefix, or personal paths.
 - `data/` is a gitignored symlink to the user's synced Google Drive
   (`My Drive/earstuffing`), so episode data, notes and discussions are backed
-  up and readable on the phone. Never commit it.
+  up. Never commit it.
 - Both `data/` and `earstuffing.local.toml` exist only in the main checkout,
   not in worktrees; `config.py` resolves them from the main checkout via git,
   so the CLI works from any worktree.
@@ -31,6 +31,9 @@ everything else.
 - Audio is transient. `render` writes to `paths.audio_cache` (outside Drive)
   and `publish` deletes it once R2 has it. `notes` deletes each recording from
   the notes bucket once it is transcribed and filed.
+- Every CLI command first fetches `origin/main` and refuses to run if the
+  checkout is behind it, since PRs merge on GitHub and never update the local
+  checkout. Fix with `git pull --ff-only` in the main checkout.
 - Voice notes come from the Android Auto app in `android/`, via the private
   `earstuffing-notes` bucket. Unmatched notes go to `data/notes/unmatched.md`.
 - `/paper N` opens a paper for discussion. `/inbox` shows replies and episodes added
