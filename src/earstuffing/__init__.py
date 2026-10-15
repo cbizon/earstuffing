@@ -99,6 +99,16 @@ def cmd_notes(config: dict, args) -> None:
     print(json.dumps(fetch_and_file(config, client, api_key), indent=2))
 
 
+def cmd_inbox(config: dict, args) -> None:
+    from earstuffing import inbox
+
+    data_dir = config["paths"]["data_dir"]
+    if args.mark:
+        print(json.dumps(inbox.mark_reviewed(data_dir), indent=2))
+    else:
+        print(json.dumps(inbox.collect(data_dir), indent=2))
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(prog="earstuffing")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -125,11 +135,14 @@ def main() -> None:
 
     sub.add_parser("hubs", help="Regenerate every paper's Obsidian hub note")
 
+    i = sub.add_parser("inbox", help="Show discussion replies and episodes added since the last review")
+    i.add_argument("--mark", action="store_true", help="Record everything as reviewed now")
+
     args = parser.parse_args()
     config = load_config()
     {
         "pending": cmd_pending, "prepare": cmd_prepare, "render": cmd_render,
-        "publish": cmd_publish, "notes": cmd_notes, "hubs": cmd_hubs,
+        "publish": cmd_publish, "notes": cmd_notes, "hubs": cmd_hubs, "inbox": cmd_inbox,
     }[
         args.command
     ](config, args)

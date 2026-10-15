@@ -33,7 +33,8 @@ everything else.
   the notes bucket once it is transcribed and filed.
 - Voice notes come from the Android Auto app in `android/`, via the private
   `earstuffing-notes` bucket. Unmatched notes go to `data/notes/unmatched.md`.
-- `/paper N` opens a paper for discussion.
+- `/paper N` opens a paper for discussion. `/inbox` shows replies and episodes added
+  since the last review (state in `data/inbox.json`) and discusses them together.
 - Tests: `uv run pytest` (unit), `uv run pytest -m integration` (real Azure TTS).
 
 ## Runbook: process new papers
