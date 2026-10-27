@@ -10,7 +10,7 @@ Review what's new across earstuffing papers.
 3. Present a short digest, newest-numbered paper last:
    - `Paper N: <title>` as a heading.
    - For new episodes, one sentence on the paper.
-   - For new discussion, each note answered: the note's first sentence, then the reply in two or three sentences. Point to `discussion.md` for the full text rather than repeating it.
+   - For new discussion, each note answered: a one-line summary of what the note said or asked (not its first sentence, which is often a preamble), then the reply in two or three sentences. Point to `discussion.md` for the full text rather than repeating it.
    - Flag anything a reply left open or asked the user about.
 4. Run `uv run earstuffing inbox --mark` so these items are not shown again.
 5. Then discuss as `/paper` does: as a colleague who has read the papers closely, answering from the papers, saying where they are silent, and pushing back where the user or a reply got something wrong. When a point is settled, append it to that paper's `discussion.md` under `## <date>: <topic>`, linking topics as `CLAUDE.md` describes, and say what you recorded.
