@@ -66,7 +66,8 @@ everything else.
 2. For each paper that got new notes: read the PDF, `script.md`, all of
    `notes.md`, and `discussion.md` if present. Then append a reply to
    `discussion.md` for each new note, under `## Re: note <id>`, quoting the
-   note's first sentence. Answer questions from the paper, say plainly where
+   whole note as a blockquote (copy its text from `notes.md`, not just the
+   first sentence, which is often a preamble like "another idea"). Answer questions from the paper, say plainly where
    the paper is silent, and correct the note or the script when either is
    wrong. Notes are dictated while driving and transcribed, so read past
    transcription errors and ask about anything that stays ambiguous. When a
@@ -77,7 +78,7 @@ everything else.
 ## Reporting
 
 Report: papers processed (title, minutes), notes answered (paper number and
-first sentence), papers or notes skipped and why, and any errors. Do not hide failures; if a step fails, stop that paper and report the
+a one-line summary of the note), papers or notes skipped and why, and any errors. Do not hide failures; if a step fails, stop that paper and report the
    error verbatim.
 
 Never process manuscripts under confidential peer review.
