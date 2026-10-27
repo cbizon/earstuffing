@@ -2,8 +2,8 @@
 
 The script is read aloud by a text-to-speech voice and heard while driving. The
 listener is a senior computational scientist (biomedical knowledge graphs, data
-integration, AI/ML, research software) who has not read the paper and cannot see
-it. Write for the ear.
+integration, AI/ML, AI agents in science, research software) who has not read
+the paper and cannot see it. Write for the ear.
 
 ## Shape
 
@@ -27,10 +27,16 @@ key idea, the results that matter and the assessment, not on routine detail.
    reproducibility, overclaiming), and how much the result is likely to matter.
    Be fair and direct. Say so if the paper is solid; say so if it is not.
 6. **Relevance.** A short closing section, introduced with "On relevance." Note
-   concrete connections to biomedical knowledge graphs, data integration and
-   standardization, graph reasoning and ranking, or applied AI in research
-   infrastructure. Keep it general and public-safe: no internal project names or
-   unpublished work. If there is no real connection, say so in one sentence.
+   concrete connections to either of two areas:
+   - biomedical knowledge graphs, data integration and standardization, graph
+     reasoning and ranking, or applied AI in research infrastructure;
+   - agentic AI, especially agents doing science: how they plan, use tools,
+     run and judge experiments, and where they fail or need human oversight.
+     Biosciences first, but agents in other sciences count.
+
+   Cover whichever areas have a real connection; don't force both. Keep it
+   general and public-safe: no internal project names or unpublished work. If
+   there is no real connection, say so in one sentence.
 7. **Close.** One sentence restating the single thing worth remembering. No
    sign-off.
 
