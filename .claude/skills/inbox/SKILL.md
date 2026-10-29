@@ -6,7 +6,7 @@ description: Show what's new in earstuffing since the last review (replies to vo
 Review what's new across earstuffing papers.
 
 1. Run `uv run earstuffing inbox`. It returns, per paper, `new_discussion` (text appended to `discussion.md` since the last review), `new_episode`, and `discussion_edited` (the file was changed by hand, so the whole file is shown). If the list is empty, say there is nothing new and stop.
-2. For each paper listed, read its `meta.json`, the PDF at its `pdf` path (Read in page ranges of at most 20 pages), `script.md`, `notes.md` and `discussion.md`, so you can discuss it properly. Use the Read tool, not shell commands.
+2. For each paper listed, read its `meta.json`, the PDF at its `pdf` path (Read in page ranges of at most 20 pages) or `page.md` for a website entry with no PDF, `script.md`, `notes.md` and `discussion.md`, so you can discuss it properly. Use the Read tool, not shell commands.
 3. Present a short digest, newest-numbered paper last:
    - `Paper N: <title>` as a heading.
    - For new episodes, one sentence on the paper.
