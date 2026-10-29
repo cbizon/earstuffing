@@ -1,5 +1,8 @@
+import threading
+from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 
+import httpx
 import pytest
 
 from earstuffing import library
@@ -24,6 +27,12 @@ BIB = """@ARTICLE{Schaffer2021-xy,
   title  = "A paper with no PDF",
   author = "Nobody, A",
   year   = 2020
+}
+
+@MISC{UnknownUnknown-bi,
+  title        = "A toolkit for exact quantitative science",
+  howpublished = "\\url{https://example.org/toolkit.html}",
+  note         = "Accessed: 2026-10-16"
 }
 """
 
@@ -52,6 +61,66 @@ def test_read_bib(paperpile):
     assert e["year"] == "2021"
     assert entries["Sap2018-ab"]["title"] == "ATOMIC: An Atlas of Machine Commonsense for If-Then Reasoning"
     assert entries["Sap2018-ab"]["venue"] == "AAAI"
+    assert e["type"] == "article" and not library.is_website(e)
+    site = entries["UnknownUnknown-bi"]
+    assert site["type"] == "misc" and site["authors"] == []
+    assert site["url"] == "https://example.org/toolkit.html"
+    assert library.is_website(site)
+
+
+ARTICLE_HTML = """<html><head><title>Toolkit</title></head><body>
+<nav><a href="/">Home</a> <a href="/about">About</a></nav>
+<article><h1>A toolkit for exact quantitative science</h1>
+<p>BootLoops is a pool of programs from mathematics, computer science and physics that an
+agentic language model can operate and extend. Each program computes an exact answer.</p>
+<p>The second paragraph explains how the programs are checked against known results, so that
+the agent cannot claim success without a verified computation behind it.</p></article>
+<footer>Copyright notice</footer></body></html>"""
+
+
+@pytest.fixture
+def site():
+    """A real local HTTP server: /article.html serves a page, anything else is 404."""
+    class Handler(BaseHTTPRequestHandler):
+        def do_GET(self):
+            if self.path != "/article.html":
+                self.send_error(404)
+                return
+            body = ARTICLE_HTML.encode()
+            self.send_response(200)
+            self.send_header("Content-Type", "text/html; charset=utf-8")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+
+        def log_message(self, *args):
+            pass
+
+    server = HTTPServer(("127.0.0.1", 0), Handler)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    yield f"http://127.0.0.1:{server.server_port}"
+    server.shutdown()
+
+
+def test_fetch_page(site, tmp_path):
+    text = library.fetch_page(f"{site}/article.html")
+    assert text.startswith(f"Source: <{site}/article.html>\nRetrieved: ")
+    assert "pool of programs from mathematics" in text and "checked against known results" in text
+    assert "Copyright notice" not in text
+
+    meta = {"slug": "site", "title": "Toolkit", "authors": [], "year": "", "venue": "", "doi": "",
+            "url": f"{site}/article.html", "pdf": None}
+    library.create_episode(tmp_path, meta)
+    path = library.save_page(tmp_path, "site", text)
+    assert path.name == library.PAGE and path.read_text() == text
+    hub = library.write_hub(tmp_path, "site").read_text()
+    assert f"[Web page](<{site}/article.html>) · [[episodes/site/page.md|Saved copy]]" in hub
+
+
+def test_fetch_page_fails_loudly(site):
+    with pytest.raises(httpx.HTTPStatusError):
+        library.fetch_page(f"{site}/missing.html")
 
 
 def test_find_pdf_by_title_and_file_field(paperpile):

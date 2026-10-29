@@ -19,7 +19,10 @@ def cmd_pending(config: dict, args) -> None:
         if status == "rendered":
             continue
         pdf = library.find_pdf(e, paths["paperpile_dir"], pdfs)
-        out.append({**e, "status": status, "pdf": str(pdf) if pdf else None})
+        page = library.episode_dir(paths["data_dir"], e["slug"]) / library.PAGE
+        out.append(
+            {**e, "status": status, "pdf": str(pdf) if pdf else None, "page": str(page) if page.exists() else None}
+        )
     print(json.dumps(out, indent=2))
 
 
@@ -32,10 +35,12 @@ def cmd_prepare(config: dict, args) -> None:
         entry = matches[0]
         pdf = library.find_pdf(entry, paths["paperpile_dir"], library.index_pdfs(paths["paperpile_dir"]))
         meta = {k: entry[k] for k in ("key", "slug", "title", "authors", "year", "venue", "doi", "url")}
+        # Fetch before creating the episode, so a failed download leaves nothing half made.
+        page = library.fetch_page(entry["url"]) if not pdf and library.is_website(entry) else None
     else:
         if not (args.pdf and args.title):
             sys.exit("Without a bib key, --pdf and --title are required")
-        pdf = args.pdf
+        pdf, page = args.pdf, None
         meta = {
             "key": None,
             "slug": library.slugify(args.slug or f"{args.title[:60]}"),
@@ -48,8 +53,20 @@ def cmd_prepare(config: dict, args) -> None:
         }
     meta["pdf"] = str(pdf) if pdf else None
     d = library.create_episode(paths["data_dir"], meta)
+    page_path = library.save_page(paths["data_dir"], meta["slug"], page) if page else None
     library.write_hub(paths["data_dir"], meta["slug"])
-    print(json.dumps({"episode_dir": str(d), **meta}, indent=2))
+    print(json.dumps({"episode_dir": str(d), **meta, "page": str(page_path) if page_path else None}, indent=2))
+
+
+def cmd_page(config: dict, args) -> None:
+    """Save the web page of an existing episode, for website entries prepared without one."""
+    data_dir = config["paths"]["data_dir"]
+    url = library.read_meta(data_dir, args.slug)["url"]
+    if not url:
+        sys.exit(f"Episode {args.slug} has no url in meta.json")
+    path = library.save_page(data_dir, args.slug, library.fetch_page(url))
+    library.write_hub(data_dir, args.slug)
+    print(json.dumps({"page": str(path), "words": len(path.read_text().split())}))
 
 
 def cmd_render(config: dict, args) -> None:
@@ -126,6 +143,9 @@ def main() -> None:
     p.add_argument("--url")
     p.add_argument("--slug")
 
+    g = sub.add_parser("page", help="Save an episode's web page (its meta.json url) as page.md")
+    g.add_argument("slug")
+
     r = sub.add_parser("render", help="Render an episode's script.md to audio")
     r.add_argument("slug")
 
@@ -142,7 +162,7 @@ def main() -> None:
     require_current(PROJECT_ROOT)
     config = load_config()
     {
-        "pending": cmd_pending, "prepare": cmd_prepare, "render": cmd_render,
+        "pending": cmd_pending, "prepare": cmd_prepare, "page": cmd_page, "render": cmd_render,
         "publish": cmd_publish, "notes": cmd_notes, "hubs": cmd_hubs, "inbox": cmd_inbox,
     }[
         args.command

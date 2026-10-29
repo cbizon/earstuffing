@@ -6,14 +6,19 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 import bibtexparser
+import httpx
+import trafilatura
 
 META = "meta.json"
 SCRIPT = "script.md"
 SUMMARY = "summary.txt"
 NOTES = "notes.md"
 DISCUSSION = "discussion.md"
+PAGE = "page.md"
 # Characters Obsidian does not allow in note names.
 UNSAFE_NAME = re.compile(r'[*"\\/<>:|?#^\[\]]')
+# Paperpile puts a website's address in howpublished as \url{...}.
+HOWPUBLISHED_URL = re.compile(r"\\url\{([^}]+)\}")
 
 
 def slugify(text: str) -> str:
@@ -49,16 +54,20 @@ def read_bib(bib_file: Path) -> list[dict]:
     entries = []
     for e in library.entries:
         fields = {k.lower(): _clean(f.value) for k, f in e.fields_dict.items()}
+        howpublished = HOWPUBLISHED_URL.search(
+            next((f.value for k, f in e.fields_dict.items() if k.lower() == "howpublished"), "")
+        )
         entries.append(
             {
                 "key": e.key,
                 "slug": slugify(e.key),
+                "type": e.entry_type.lower(),
                 "title": fields.get("title", ""),
                 "authors": _authors(e.fields_dict["author"].value) if "author" in fields else [],
                 "year": fields.get("year", ""),
                 "venue": fields.get("journal") or fields.get("booktitle") or "",
                 "doi": fields.get("doi", ""),
-                "url": fields.get("url", ""),
+                "url": fields.get("url") or (howpublished.group(1) if howpublished else ""),
                 "eprint": fields.get("eprint", ""),
                 "file": fields.get("file", ""),
             }
@@ -97,6 +106,28 @@ def find_pdf(entry: dict, paperpile_dir: Path, pdfs: list[Path]) -> Path | None:
         if have == want or (len(have) >= 30 and want.startswith(have)):
             return pdf
     return None
+
+
+def is_website(entry: dict) -> bool:
+    """Paperpile exports its Website type as @MISC with the address in howpublished."""
+    return entry["type"] == "misc" and bool(entry["url"])
+
+
+def fetch_page(url: str) -> str:
+    """Download a web page and return its main text as Markdown, headed by its source."""
+    response = httpx.get(url, follow_redirects=True, timeout=30)
+    response.raise_for_status()
+    text = trafilatura.extract(response.text, url=url, output_format="markdown", include_tables=True)
+    if not text:
+        raise ValueError(f"No readable text extracted from {url}")
+    retrieved = datetime.now(timezone.utc).date().isoformat()
+    return f"Source: <{url}>\nRetrieved: {retrieved}\n\n{text.strip()}\n"
+
+
+def save_page(data_dir: Path, slug: str, text: str) -> Path:
+    path = episode_dir(data_dir, slug) / PAGE
+    path.write_text(text)
+    return path
 
 
 def episode_dir(data_dir: Path, slug: str) -> Path:
@@ -206,6 +237,8 @@ def write_hub(data_dir: Path, slug: str) -> Path:
     lines += [f"# Paper {meta['number']}: {meta['title']}", "", byline, ""]
     if meta.get("pdf"):
         lines += [f"[PDF](<{Path(meta['pdf']).as_uri()}>)", ""]
+    elif (d / PAGE).exists():
+        lines += [f"[Web page](<{meta['url']}>) · [[{rel}/{PAGE}|Saved copy]]", ""]
     summary = meta.get("summary") or ((d / SUMMARY).read_text().strip() if (d / SUMMARY).exists() else "")
     if summary:
         lines += [summary, ""]

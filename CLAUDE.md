@@ -18,7 +18,8 @@ everything else.
   not in worktrees; `config.py` resolves them from the main checkout via git,
   so the CLI works from any worktree.
 - Episode data: `data/episodes/<slug>/` holding `meta.json`,
-  `script.md`, `summary.txt`, a generated hub note `Paper N - <title>.md`, and
+  `script.md`, `summary.txt`, a generated hub note `Paper N - <title>.md`,
+  `page.md` for website entries (the page's main text, saved by the CLI), and
   once there are voice notes, `notes.md` (transcribed notes) and
   `discussion.md` (replies and conclusions).
 - `data/` is an Obsidian vault, read and edited on the laptop only. The hub
@@ -48,14 +49,21 @@ everything else.
 ## Runbook: process new papers
 
 1. `uv run earstuffing pending` lists Listen papers without audio, with each
-   one's `status` and local `pdf` path.
+   one's `status`, Paperpile entry `type`, local `pdf` path and saved `page`.
 2. For each entry:
-   - `status: new` → `uv run earstuffing prepare <key>`.
-   - If `pdf` is null, try to get an open-access copy (arXiv, bioRxiv, PMC, or
-     the DOI landing page) into `data/episodes/<slug>/paper.pdf` and set `pdf` in
-     `meta.json`. If none is available, skip it and report it.
-   - `needs_script` → read the whole PDF, then write `script.md` and
-     `summary.txt` following `SCRIPT_GUIDE.md` exactly.
+   - `status: new` → `uv run earstuffing prepare <key>`. For a website entry
+     (`type: misc` with a `url`, no `pdf`) this also fetches the page into
+     `page.md`; if the fetch fails, `prepare` stops and creates nothing.
+   - If `pdf` is null on a website entry that is already prepared but has no
+     `page`, run `uv run earstuffing page <slug>`.
+   - If `pdf` is null on any other entry, try to get an open-access copy (arXiv,
+     bioRxiv, PMC, or the DOI landing page) into `data/episodes/<slug>/paper.pdf`
+     and set `pdf` in `meta.json`. If none is available, skip it and report it.
+   - `needs_script` → read the whole PDF, or `page.md` for a website, then write
+     `script.md` and `summary.txt` following `SCRIPT_GUIDE.md` exactly. If
+     `page.md` is thin (navigation, a teaser, a sign-in wall) rather than the
+     content, skip the entry and report it. A website has no venue; fill in
+     authors and year in `meta.json` from the page when it gives them.
    - `uv run earstuffing render <slug>`.
 3. `uv run earstuffing publish` uploads new audio and rewrites the feed.
 
@@ -63,7 +71,7 @@ everything else.
 
 1. `uv run earstuffing notes` fetches, transcribes and files new notes, and
    prints what it filed where.
-2. For each paper that got new notes: read the PDF, `script.md`, all of
+2. For each paper that got new notes: read the PDF (or `page.md`), `script.md`, all of
    `notes.md`, and `discussion.md` if present. Then append a reply to
    `discussion.md` for each new note, under `## Re: note <id>`, quoting the
    whole note as a blockquote (copy its text from `notes.md`, not just the
