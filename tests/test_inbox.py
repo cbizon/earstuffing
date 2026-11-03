@@ -1,3 +1,5 @@
+import json
+
 from earstuffing import inbox, library
 
 
@@ -46,3 +48,26 @@ def test_hand_edited_discussion_is_shown_in_full(tmp_path):
     (item,) = inbox.collect(tmp_path)
     assert item["discussion_edited"] is True
     assert item["new_discussion"] == "Short."
+
+
+def test_text_inserted_above_seen_end_shows_discussion_in_full(tmp_path):
+    a = make_episode(tmp_path, "a")
+    (a / library.DISCUSSION).write_text("# Discussion\n\n## Re: note 1\n\nFirst reply.\n")
+    inbox.mark_reviewed(tmp_path)
+    (a / library.DISCUSSION).write_text("# Discussion\n\nTopics: [[X]]\n\n## Re: note 1\n\nFirst reply.\n")
+    (item,) = inbox.collect(tmp_path)
+    assert item["discussion_edited"] is True
+    assert item["new_discussion"].startswith("# Discussion")
+
+
+def test_state_without_hashes_falls_back_to_offsets(tmp_path):
+    a = make_episode(tmp_path, "a")
+    (a / library.DISCUSSION).write_text("First reply.\n")
+    state = inbox.mark_reviewed(tmp_path)
+    del state["seen_sha256"]
+    (tmp_path / inbox.STATE).write_text(json.dumps(state))
+    with (a / library.DISCUSSION).open("a") as f:
+        f.write("Second reply.\n")
+    (item,) = inbox.collect(tmp_path)
+    assert item["discussion_edited"] is False
+    assert item["new_discussion"] == "Second reply."
