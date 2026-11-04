@@ -10,7 +10,14 @@ Review what's new across earstuffing papers.
 3. Present a short digest, newest-numbered paper last:
    - `Paper N: <title>` as a heading.
    - For new episodes, one sentence on the paper.
-   - For new discussion, each note answered: a one-line summary of what the note said or asked (not its first sentence, which is often a preamble), then the reply in two or three sentences. Point to `discussion.md` for the full text rather than repeating it.
+   - For new discussion, each note answered: a one-line summary of what the note said or asked (not its first sentence, which is often a preamble), then the reply in two or three sentences.
    - Flag anything a reply left open or asked the user about.
+
+   Write the same digest to `data/Inbox.md` (overwrite it; it holds only the latest digest), with links, since the chat pane can't open vault pages:
+   - Paper headings as `[[Paper N]]: <title>`.
+   - After each reply summary, `[[episodes/<slug>/discussion#Re note <id>|Reply]]`. Drop the colon from the heading: Obsidian heading links omit it.
+   - A "Pages created or changed" section linking new or changed topics, projects and `[[To-do]]`, saying which are new.
+
+   Write it through the vault's real path (the target of the main checkout's `data/` symlink), since worktrees have no `data/`. Then open it with `open "obsidian://open?vault=earstuffing&file=Inbox"`. The chat digest has no links.
 4. Run `uv run earstuffing inbox --mark` so these items are not shown again.
-5. Then discuss as `/paper` does: as a colleague who has read the papers closely, answering from the papers, saying where they are silent, and pushing back where the user or a reply got something wrong. When a point is settled, append it to that paper's `discussion.md` under `## <date>: <topic>`, linking topics as `CLAUDE.md` describes, and say what you recorded.
+5. Then discuss as `/paper` does: as a colleague who has read the papers closely, answering from the papers, saying where they are silent, and pushing back where the user or a reply got something wrong. When a point is settled, append it to that paper's `discussion.md` under `## <date>: <topic>`, linking topics as `CLAUDE.md` describes, and say what you recorded. Add a link to it under "Pages created or changed" in `data/Inbox.md`.
