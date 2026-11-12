@@ -1,7 +1,7 @@
 [project]
 name = "earstuffing"
 version = "0.1.0"
-description = "Add your description here"
+description = "Turn papers into narrated audio explanations delivered as a private podcast feed"
 readme = "README.md"
 authors = [
     { name = "Chris Bizon", email = "bizon@renci.org" }
